@@ -62,117 +62,88 @@ fbq('track', 'PageView');
 
 <!-- ===== سكريبت الإرسال وتسجيل الـ Purchase ===== -->
 <script>
-  (function(){
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQIEL-idsBDAtOiCBR7RJdESxZJNDdidGS79Eoq5Y6hPrD6m9Rf4YwLk-ZYbLX5fteSA/exec";
+document.addEventListener("DOMContentLoaded", function(){
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQIEL-idsBDAtOiCBR7RJdESxZJNDdidGS79Eoq5Y6hPrD6m9Rf4YwLk-ZYbLX5fteSA/exec";
+  const offers = Array.from(document.querySelectorAll('.offer'));
+  const btn = document.getElementById('submitBtn');
+  const form = document.getElementById('orderForm');
+  const resultMsg = document.getElementById('resultMsg');
+  let selectedOffer = 325; // القيمة الافتراضية
+  let purchaseTracked = false;
 
-    // عناصر العروض
-    const offers = Array.from(document.querySelectorAll('.offer'));
-    // قيمة افتراضية في حالة عدم وجود عناصر عروض
-    let selectedOffer = offers.length ? offers[0].dataset.offer : '325.00';
-
-    // تفعيل اختيار العرض (اضافة/حذف الكلاس active)
-    offers.forEach(o => {
-      o.addEventListener('click', () => {
-        offers.forEach(x => x.classList.remove('active'));
-        o.classList.add('active');
-        selectedOffer = o.dataset.offer;
-      });
+  // تحديث قيمة العرض حسب الاختيار
+  offers.forEach(o => {
+    o.addEventListener('click', () => {
+      offers.forEach(x => x.classList.remove('active'));
+      o.classList.add('active');
+      selectedOffer = parseFloat(o.dataset.offer);
+      btn.textContent = `✔ تأكيد الطلب الآن — ${selectedOffer} جنيه`;
     });
+  });
 
-    const form = document.getElementById('orderForm');
-    const btn = document.getElementById('submitBtn');
-    const resultMsg = document.getElementById('resultMsg');
+  // تحديث الزر مبدئيًا
+  btn.textContent = `✔ تأكيد الطلب الآن — ${selectedOffer} جنيه`;
 
-    // Flag لمنع ارسال حدث Purchase مرتين
-    let purchaseTracked = false;
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
 
-    form.addEventListener('submit', function(e){
-      e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const city = document.getElementById('city').value.trim();
+    const address = document.getElementById('address').value.trim();
 
-      // قراءة القيم من الفورم
-      const name = document.getElementById('name').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const city = document.getElementById('city').value.trim();
-      const address = document.getElementById('address').value.trim();
+    if(!name || !phone || !city || !address){
+      alert('من فضلك املأ جميع الحقول المطلوبة.');
+      return;
+    }
 
-      if(!name || !phone || !city || !address){
-        alert('من فضلك املأ جميع الحقول المطلوبة.');
-        return;
-      }
+    if(isNaN(selectedOffer) || selectedOffer <= 0){
+      alert('حدث خطأ في قيمة العرض المختار. حاول مرة أخرى.');
+      return;
+    }
 
-      // تأكد من وجود سعر صحيح
-      const orderValue = parseFloat(selectedOffer);
-      if(Number.isNaN(orderValue) || orderValue <= 0){
-        alert('هناك خطأ في قيمة العرض المختار. حاول إعادة تحميل الصفحة أو تواصل معي.');
-        return;
-      }
+    btn.textContent = "⏳ جاري إرسال الطلب...";
+    btn.disabled = true;
+    resultMsg.textContent = "";
 
-      // تحديث واجهة المستخدم
-      btn.textContent = "⏳ جاري إرسال الطلب...";
-      btn.disabled = true;
-      resultMsg.textContent = '';
+    const payload = {
+      name: name,
+      phone: phone,
+      city: city,
+      address: address,
+      offer: selectedOffer
+    };
 
-      // إعداد الـ payload للإرسال إلى Google Script
-      const payload = {
-        name: name,
-        phone: phone,
-        city: city,
-        address: address,
-        offer: orderValue
-      };
-
-      // إرسال الطلب إلى Google Script (no-cors) — لا نعتمد على النتيجة للـ fbq
-      try {
-        fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          body: new URLSearchParams(payload)
-        }).then(() => {
-          // حتى لو لم نستلم ردًا (no-cors)، نعامل الطلب كمرسل
-          onSuccessAfterSend(orderValue);
-        }).catch((err) => {
-          // في حالة فشل الشبكة، نعرض رسالة لكن نسمح بإعادة المحاولة
-          console.error('Send error:', err);
-          alert('حدث خطأ أثناء الإرسال، حاول مرة أخرى.');
-          btn.textContent = "✔ تأكيد الطلب الآن";
-          btn.disabled = false;
-        });
-      } catch (err) {
-        console.error('Fetch exception:', err);
-        alert('حدث خطأ. حاول مرة أخرى.');
-        btn.textContent = "✔ تأكيد الطلب الآن";
-        btn.disabled = false;
-      }
-    });
-
-    function onSuccessAfterSend(value){
-      // عرض رسالة نجاح للمستخدم
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: new URLSearchParams(payload)
+    }).then(() => {
+      resultMsg.textContent = "✅ تم إرسال طلبك بنجاح، سيتم التواصل معك قريبًا.";
       btn.textContent = "✅ تم إرسال طلبك بنجاح";
       btn.classList.add("success");
-      resultMsg.textContent = "✅ تم إرسال طلبك بنجاح، سيتم التواصل معك قريبًا.";
 
-      // تسجبل حدث الشراء في Facebook Pixel مرة واحدة فقط
+      // تسجيل حدث الشراء في فيسبوك بيكسل
       if(typeof fbq === 'function' && !purchaseTracked){
-        try {
-          fbq('track', 'Purchase', {
-            value: parseFloat(value),
-            currency: 'EGP'
-          });
-          purchaseTracked = true;
-          console.log('fbq Purchase sent:', value, 'EGP');
-        } catch(err){
-          console.error('fbq error:', err);
-        }
-      } else if (typeof fbq !== 'function'){
-        console.warn('fbq not defined. Make sure the Pixel base code is present in <head>.');
+        fbq('track', 'Purchase', {
+          value: selectedOffer,
+          currency: 'EGP'
+        });
+        purchaseTracked = true;
+        console.log("📊 Purchase Event sent:", selectedOffer, "EGP");
       }
 
-      // إعادة تعيين الفورم بعد وقت قصير
       setTimeout(() => {
-        try { document.getElementById('orderForm').reset(); } catch(e){}
+        form.reset();
         btn.disabled = false;
-        btn.textContent = "✔ تأكيد الطلب الآن";
+        btn.textContent = `✔ تأكيد الطلب الآن — ${selectedOffer} جنيه`;
       }, 2000);
-    }
-  })();
+    }).catch(err => {
+      alert('حدث خطأ أثناء الإرسال. حاول مرة أخرى.');
+      btn.textContent = `✔ تأكيد الطلب الآن — ${selectedOffer} جنيه`;
+      btn.disabled = false;
+      console.error(err);
+    });
+  });
+});
 </script>
