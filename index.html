@@ -165,11 +165,10 @@ document.addEventListener("DOMContentLoaded", function(){
         console.log("📊 Purchase Event sent:", selectedOffer, "EGP");
       }
 
-      setTimeout(() => {
-        form.reset();
-        btn.disabled = false;
-        btn.textContent = `✔ تأكيد الطلب الآن — ${selectedOffer} جنيه`;
-      }, 2000);
+      form.reset();
+btn.disabled = true;
+btn.style.opacity = "0.6"; // يخلي الزر باين إنه اتقفل
+
     }).catch(err => {
       alert('حدث خطأ أثناء الإرسال. حاول مرة أخرى.');
       btn.textContent = `✔ تأكيد الطلب الآن — ${selectedOffer} جنيه`;
